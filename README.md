@@ -107,8 +107,9 @@ request, since they would address another endpoint.
 `ClientOptions` sets `timeout` (30 s), `connectTimeout` (10 s), `maxRetries`
 (2: network failures and `5xx`, never a `429`), `retryBaseDelay` (0.5 s) and
 `maxRetryDelay` (5 s) of the exponential backoff, `maxRedirects` (3) and
-`userAgent`. The timeouts travel with every request, so they also apply
-through a custom transport.
+`userAgent`. Each redirect hop is retried on its own, so a request makes at
+most `(maxRedirects + 1) × (maxRetries + 1)` attempts. The timeouts travel with
+every request, so they also apply through a custom transport.
 
 A custom transport implements `GoSuccess\EndOfLife\Http\HttpClient`. With
 Laravel's Http facade:

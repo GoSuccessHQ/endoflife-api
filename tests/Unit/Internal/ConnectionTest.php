@@ -196,6 +196,8 @@ final class ConnectionTest extends TestCase
         yield 'absolute' => ['https://endoflife.date/api/v1/products/ubuntu', 'https://endoflife.date/api/v1/products/ubuntu'];
         yield 'absolute path' => ['/api/v1/products/ubuntu', 'https://endoflife.date/api/v1/products/ubuntu'];
         yield 'relative path' => ['ubuntu', 'https://endoflife.date/api/v1/products/ubuntu'];
+        yield 'query only' => ['?x=1', 'https://endoflife.date/api/v1/products/ubuntu-linux?x=1'];
+        yield 'fragment only' => ['#top', 'https://endoflife.date/api/v1/products/ubuntu-linux#top'];
         yield 'explicit default port' => ['https://endoflife.date:443/api/v1/products/ubuntu', 'https://endoflife.date:443/api/v1/products/ubuntu'];
     }
 
@@ -250,6 +252,56 @@ final class ConnectionTest extends TestCase
         }
 
         self::assertSame(3, $http->callCount());
+    }
+
+    public function testNoRedirectIsFollowedWithMaxRedirectsZero(): void
+    {
+        $http = new MockHttpClient(new Response(301, '', ['location' => '/api/v1/products/ubuntu/']));
+
+        $this->expectException(ApiException::class);
+        $this->expectExceptionCode(301);
+
+        self::connection($http, new ClientOptions(maxRedirects: 0))->get('/products/ubuntu-linux', self::raw(...));
+    }
+
+    public function testALookupWhoseRedirectTargetIsUnknownIsNull(): void
+    {
+        $http = new MockHttpClient(new Response(301, '', ['location' => '/api/v1/products/gone/']), new Response(404, self::HTML_404));
+
+        self::assertNull(self::connection($http)->find('/products/renamed', self::raw(...)));
+        self::assertSame(2, $http->callCount());
+    }
+
+    public function testEveryRedirectHopIsRetriedOnItsOwn(): void
+    {
+        $http = new MockHttpClient(
+            new Response(301, '', ['location' => '/api/v1/products/ubuntu/']),
+            new Response(503),
+            new Response(200, '{"name":"ubuntu"}'),
+        );
+
+        $data = self::connection($http, new ClientOptions(maxRetries: 1, retryBaseDelay: 0.0))->get('/products/ubuntu-linux', self::raw(...));
+
+        self::assertSame(['name' => 'ubuntu'], $data);
+        self::assertSame('https://endoflife.date/api/v1/products/ubuntu/', $http->requests[2]->uri);
+    }
+
+    public function testARateLimitAfterARedirectIsThrownAtOnce(): void
+    {
+        $http = new MockHttpClient(
+            new Response(301, '', ['location' => '/api/v1/products/ubuntu/']),
+            new Response(429, '', ['retry-after' => '30']),
+        );
+
+        try {
+            self::connection($http, new ClientOptions(maxRetries: 3, retryBaseDelay: 0.0))->get('/products/ubuntu-linux', self::raw(...));
+            self::fail('Expected a RateLimitException.');
+        } catch (RateLimitException $e) {
+            self::assertSame(30, $e->retryAfter);
+            self::assertStringContainsString('/products/ubuntu/', $e->getMessage());
+        }
+
+        self::assertSame(2, $http->callCount());
     }
 
     public function testRedirectWithoutLocationThrows(): void

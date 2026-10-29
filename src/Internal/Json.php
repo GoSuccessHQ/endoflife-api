@@ -223,6 +223,20 @@ final class Json
     }
 
     /**
+     * A list of strings with at least one entry (`minItems: 1`).
+     *
+     * @param array<array-key, mixed> $data
+     *
+     * @return non-empty-list<string>
+     */
+    public static function nonEmptyStrings(array $data, string|int $key, string $path): array
+    {
+        $items = self::strings($data, $key, $path);
+
+        return $items !== [] ? $items : throw self::invalid($path, $key, 'a list with at least one string');
+    }
+
+    /**
      * An object of strings or nulls (`UnknownProperties`), or null; missing
      * counts as null.
      *

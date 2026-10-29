@@ -218,6 +218,7 @@ final class ModelsTest extends TestCase
     {
         $product = Spec::example('ProductResponse');
 
+        yield 'no tags' => [Spec::with($product, 'result.tags', []), 'Field result.tags must be a list with at least one string.'];
         yield 'tag as number' => [Spec::with($product, 'result.tags', ['os', 1]), 'Field result.tags[1] must be a string.'];
         yield 'aliases as object' => [Spec::with($product, 'result.aliases', ['a' => 'b']), 'Field result.aliases must be a list.'];
         yield 'release with wrong date' => [Spec::with($product, 'result.releases.0.releaseDate', '21.04.2022'), 'Field result.releases[0].releaseDate must be a date (YYYY-MM-DD).'];
@@ -239,6 +240,37 @@ final class ModelsTest extends TestCase
         $this->expectExceptionMessage($message);
 
         ProductResponse::fromJson($data);
+    }
+
+    public function testAProductSummaryWithoutTagsThrows(): void
+    {
+        $this->expectException(SerializationException::class);
+        $this->expectExceptionMessage('Field result[0].tags must be a list with at least one string.');
+
+        ProductListResponse::fromJson(Spec::with(Spec::example('ProductListResponse'), 'result.0.tags', []));
+    }
+
+    /**
+     * @return iterable<string, array{mixed}>
+     */
+    public static function invalidTimes(): iterable
+    {
+        yield 'garbage' => ['yesterday'];
+        yield 'without zone' => ['2026-10-29T00:09:58'];
+        yield 'day that does not exist' => ['2023-02-30T10:00:00+00:00'];
+        yield 'hour that does not exist' => ['2026-10-29T25:00:00Z'];
+        yield 'space instead of T' => ['2026-10-29 00:09:58+00:00'];
+        yield 'number' => [1_761_696_598];
+        yield 'null' => [null];
+    }
+
+    #[DataProvider('invalidTimes')]
+    public function testATimeThatIsNoRfc3339TimeThrows(mixed $value): void
+    {
+        $this->expectException(SerializationException::class);
+        $this->expectExceptionMessage('Field generated_at must be a time after RFC 3339.');
+
+        UriListResponse::fromJson(Spec::with(Spec::example('UriListResponse'), 'generated_at', $value));
     }
 
     public function testAnIdentifierWithoutProductThrows(): void

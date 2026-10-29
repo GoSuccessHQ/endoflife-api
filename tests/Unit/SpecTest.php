@@ -18,6 +18,7 @@ use PHPUnit\Framework\TestCase;
  *
  * A field is `<mode> <type>`. Modes: `R` required and never null, `N` required
  * but may be null, `O` optional and never null, `ON` optional and may be null.
+ * A type `list<…>+` is a list with at least one entry (`minItems: 1`).
  */
 #[CoversNothing]
 final class SpecTest extends TestCase
@@ -61,11 +62,11 @@ final class SpecTest extends TestCase
         ],
         'ProductSummary' => [
             'name' => 'R string', 'label' => 'R string', 'aliases' => 'R list<string>', 'category' => 'R string',
-            'tags' => 'R list<string>', 'uri' => 'R uri',
+            'tags' => 'R list<string>+', 'uri' => 'R uri',
         ],
         'ProductDetails' => [
             'name' => 'R string', 'label' => 'R string', 'aliases' => 'R list<string>', 'category' => 'R string',
-            'tags' => 'R list<string>', 'versionCommand' => 'ON string', 'identifiers' => 'R list<Identifier>',
+            'tags' => 'R list<string>+', 'versionCommand' => 'ON string', 'identifiers' => 'R list<Identifier>',
             'labels' => 'R object', 'links' => 'R object', 'releases' => 'R list<ProductRelease>',
         ],
         'ProductDetails.labels' => ['eoas' => 'ON string', 'discontinued' => 'ON string', 'eol' => 'R string', 'eoes' => 'ON string'],
@@ -243,7 +244,8 @@ final class SpecTest extends TestCase
             $items = $property['items'] ?? [];
             self::assertIsArray($items);
 
-            return ['list<' . self::type($items)[0] . '>', $nullable];
+            // `+`: at least one entry (`minItems: 1`).
+            return ['list<' . self::type($items)[0] . '>' . (($property['minItems'] ?? 0) === 1 ? '+' : ''), $nullable];
         }
 
         if ($type === 'string' && \is_string($property['format'] ?? null)) {

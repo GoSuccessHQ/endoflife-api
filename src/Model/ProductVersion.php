@@ -39,5 +39,4 @@ final readonly class ProductVersion
             Json::nullableString($data, 'link', $path),
         );
     }
-
 }

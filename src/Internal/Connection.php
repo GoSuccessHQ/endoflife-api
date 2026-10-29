@@ -263,6 +263,12 @@ final class Connection
         }
 
         $path = (string) ($parts['path'] ?? '/');
+
+        if (str_starts_with($location, '?') || str_starts_with($location, '#')) {
+            // Only a query or fragment: the same path (RFC 3986, section 5.2.2).
+            return "{$scheme}://{$authority}{$path}{$location}";
+        }
+
         $directory = substr($path, 0, (int) strrpos($path, '/') + 1);
 
         return "{$scheme}://{$authority}{$directory}{$location}";

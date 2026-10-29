@@ -41,7 +41,7 @@ final readonly class ProductSummary
             Json::string($data, 'label', $path),
             Json::strings($data, 'aliases', $path),
             Json::string($data, 'category', $path),
-            Json::strings($data, 'tags', $path),
+            Json::nonEmptyStrings($data, 'tags', $path),
             Json::string($data, 'uri', $path),
         );
     }
