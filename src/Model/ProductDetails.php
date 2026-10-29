@@ -22,8 +22,8 @@ final readonly class ProductDetails
      * @param list<Identifier>     $identifiers    Known identifiers (purl, repology, cpe, …).
      * @param ProductLabels        $labels         Names of the support phases.
      * @param ProductLinks         $links          Links of the product.
-     * @param list<ProductRelease> $releases       The release cycles, newest first as the API
-     *                                             sends them.
+     * @param list<ProductRelease> $releases       The release cycles in the order of the API
+     *                                             (newest first for PHP and Ubuntu).
      */
     public function __construct(
         public string $name,
